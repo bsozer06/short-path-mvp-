@@ -3,6 +3,8 @@
 
 This project is a simple MVP for visualizing and calculating the shortest route on a road network using React, Leaflet, GeoServer, and a Node.js backend.
 
+![App Screenshot](./images/ss-mvp-simple.png)
+
 ### Features
 - Interactive map with OpenStreetMap basemap
 - Road network and shortest path layers from GeoServer (WMS)
