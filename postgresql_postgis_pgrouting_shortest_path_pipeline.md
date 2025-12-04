@@ -153,12 +153,58 @@ Calculates the relative position (**0–1**) of a node along a road line for cor
 ## 12. Create Edge Segments & Costs
 
 ```sql
-INSERT INTO network_edges (source, target, cost, geom)
+WITH node_on_line AS (
+    SELECT
+        l.id AS line_id,
+        n.id AS node_id,
+        n.geom AS node_geom,
+        ST_LineLocatePoint(l.geom, n.geom) AS fraction
+    FROM grid_lines AS l
+    JOIN network_nodes AS n
+        ON ST_DWithin(l.geom, n.geom, 0.0001)
+    WHERE ST_Equals(
+        n.geom,
+        ST_ClosestPoint(l.geom, n.geom)
+    )
+),
+
+ordered_nodes AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY line_id
+            ORDER BY fraction
+        ) AS rn
+    FROM node_on_line
+),
+
+node_pairs AS (
+    SELECT
+        n1.line_id,
+        n1.node_id AS source,
+        n1.node_geom AS source_geom,
+        n2.node_id AS target,
+        n2.node_geom AS target_geom
+    FROM ordered_nodes n1
+    JOIN ordered_nodes n2
+        ON n1.line_id = n2.line_id
+       AND n2.rn = n1.rn + 1
+)
+
+INSERT INTO network_edges (
+    source,
+    target,
+    cost,
+    geom
+)
 SELECT
     source,
     target,
-    ROUND(ST_DistanceSphere(source_geom, target_geom) / 1000, 2),
-    ST_MakeLine(source_geom, target_geom)
+    ROUND(
+        ST_DistanceSphere(source_geom, target_geom)::NUMERIC / 1000,
+        2
+    ) AS cost,
+    ST_MakeLine(source_geom, target_geom) AS geom
 FROM node_pairs;
 ```
 
