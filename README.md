@@ -1,5 +1,4 @@
-# Getting Started with Create React App
-## Shortest Path MVP
+# Shortest Path MVP
 
 This project is a simple MVP for visualizing and calculating the shortest route on a road network using React, Leaflet, GeoServer, and a Node.js backend.
 
@@ -28,6 +27,18 @@ This project is a simple MVP for visualizing and calculating the shortest route 
 - PostgreSQL/PostGIS for network data
 - React and Leaflet for frontend mapping
 - Express for backend API
+
+### Database & Routing Pipeline
+
+For details on how the shortest path calculation is performed using PostgreSQL, PostGIS, and pgRouting, see the documentation in [`postgresql_postgis_pgrouting_shortest_path_pipeline.md`](./postgresql_postgis_pgrouting_shortest_path_pipeline.md).
+
+This document explains:
+- How the road network is stored in the database
+- How shortest path queries are executed
+- Example SQL queries and pipeline steps
+
+Refer to it for backend setup, database schema, and advanced routing logic.
+
 ### Notes
 - Ensure CORS is handled properly between frontend and backend.
 - Adjust GeoServer WMS URLs as needed for your setup.
