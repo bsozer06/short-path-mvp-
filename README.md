@@ -1,4 +1,4 @@
-# Shortest Path MVP
+# Shortest Route MVP
 
 This project is a simple MVP for visualizing and calculating the shortest route on a road network using React, Leaflet, GeoServer, and a Node.js backend.
 
