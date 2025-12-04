@@ -4,6 +4,12 @@ This project is a simple MVP for visualizing and calculating the shortest route 
 
 ![App Screenshot](./images/ss-mvp-simple.png)
 
+### Sequence Diagram
+
+Below is a sequence diagram illustrating the shortest route calculation process:
+
+![Shortest Route Sequence Diagram](./images/seq-diag-shortest-route.png)
+
 ### Features
 - Interactive map with OpenStreetMap basemap
 - Road network and shortest path layers from GeoServer (WMS)
