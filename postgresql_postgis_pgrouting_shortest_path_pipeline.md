@@ -308,6 +308,56 @@ shortest_path_edges AS (
 SELECT * FROM shortest_path_edges;
 ```
 
+```sql
+CREATE MATERIALIZED VIEW mv_astar_path AS
+WITH source_node AS (
+    SELECT id
+    FROM public.network_nodes
+    ORDER BY geom <-> (SELECT geom FROM public.points ORDER BY id LIMIT 1)
+    LIMIT 1
+),
+target_node AS (
+    SELECT id
+    FROM public.network_nodes
+    ORDER BY geom <-> (SELECT geom FROM public.points ORDER BY id DESC LIMIT 1)
+    LIMIT 1
+),
+shortest_path_edges AS ( 
+    SELECT
+        e.*,
+        path.seq, 
+        path.path_seq
+    FROM
+        pgr_aStar(
+            'SELECT
+			    ne.id,
+			    ne.source,
+			    ne.target,
+			    ne.cost,
+			    ne.reverse_cost,
+			    st_x(ns.geom) AS x1,
+			    st_y(ns.geom) AS y1,
+			    st_x(nt.geom) AS x2,
+			    st_y(nt.geom) AS y2
+			  FROM
+			    network_edges ne
+			  JOIN
+			    network_nodes ns ON ne.source = ns.id
+			  JOIN
+			    network_nodes nt ON ne.target = nt.id',
+            (SELECT id FROM source_node),
+            (SELECT id FROM target_node),
+            directed := FALSE
+        ) AS path
+    JOIN
+        network_edges e ON path.edge = e.id
+)
+SELECT
+    *
+FROM
+    shortest_path_edges;
+```
+
 📌 Automatically finds nearest nodes and computes the shortest route.
 
 ---
