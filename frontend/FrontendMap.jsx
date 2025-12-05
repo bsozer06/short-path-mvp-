@@ -31,7 +31,7 @@ function FrontendMap() {
 
   useEffect(() => {
     if (!mapRef.current) {
-      const map = L.map('map').setView([39.954748, 32.7347912], 10);
+      const map = L.map('map').setView([39.93048, 32.7347912], 10.5);
       mapRef.current = map;
 
       // Basemap: OpenStreetMap
@@ -353,7 +353,7 @@ function FrontendMap() {
                 <div style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{ fontWeight: 600, color: '#555', marginBottom: '4px' }}>Dijkstra</div>
                   <div style={{ fontSize: '1.1em', marginBottom: '2px' }}>
-                    <span style={{ color: '#28a745', fontWeight: 600 }}>🟢</span> {routeInfo.dijkstra ? routeInfo.dijkstra.distance.toFixed(2) : '-'} km
+                    <span style={{ color: '#8f8100ff', fontWeight: 600 }}>🟡</span> {routeInfo.dijkstra ? routeInfo.dijkstra.distance.toFixed(2) : '-'} km
                   </div>
                   <div style={{ fontSize: '0.95em', color: '#888' }}>Edge: <b>{routeInfo.dijkstra ? routeInfo.dijkstra.edgeCount : '-'}</b></div>
                 </div>

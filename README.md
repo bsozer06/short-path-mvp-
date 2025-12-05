@@ -2,7 +2,7 @@
 
 This project is a modern MVP web application for visualizing and comparing shortest routes on a road network using React, Leaflet, GeoServer, and a Node.js backend powered by PostgreSQL/PostGIS/pgRouting.
 
-![App Screenshot](./images/ss-mvp-simple.png)
+![App Screenshot](./images/shortest-route-finder-gif.gif)
 
 ## Features
 
