@@ -1,51 +1,46 @@
-# Shortest Route MVP
+# Shortest Path Route Finder MVP
 
-This project is a simple MVP for visualizing and calculating the shortest route on a road network using React, Leaflet, GeoServer, and a Node.js backend.
+This project is a modern MVP web application for visualizing and comparing shortest routes on a road network using React, Leaflet, GeoServer, and a Node.js backend powered by PostgreSQL/PostGIS/pgRouting.
 
 ![App Screenshot](./images/ss-mvp-simple.png)
 
-### Sequence Diagram
+## Features
 
-Below is a sequence diagram illustrating the shortest route calculation process:
-
-![Shortest Route Sequence Diagram](./images/seq-diag-shortest-route.png)
-
-### Features
 - Interactive map with OpenStreetMap basemap
 - Road network and shortest path layers from GeoServer (WMS)
 - Select start and end points on the map
-- Send selected points to backend for shortest path calculation
-- Display results as a WMS layer
+- Calculate shortest route using both Dijkstra and A* algorithms
+- Visual comparison of Dijkstra and A* results (distance, edge count)
+- Modern UI with responsive design, loading spinner, and route details panel
 
-### Setup
-1. **Backend**: Start the Node.js backend in `backend/` (see `index.js`).
-2. **Frontend**: Start the React app in `frontend/` using `npm start`.
-3. **GeoServer**: Make sure GeoServer is running and WMS layers (`network:grid_lines`, `network:mv_short_path`) are published.
+## Setup
 
-### Usage
+1. **Backend**: Start the Node.js backend in `backend/` (`node index.js`).
+2. **Frontend**: Start the React app in `frontend/` (`npm start`).
+3. **GeoServer**: Ensure GeoServer is running and WMS layers (`network:grid_lines`, `network:mv_short_path`, `network:mv_astar_path`) are published.
+4. **Database**: PostgreSQL with PostGIS and pgRouting must be set up for network data.
+
+## Usage
+
 - Click "Select Start" and choose a start point on the map.
 - Click "Select End" and choose an end point.
-- Click "Send (Route Request)" to calculate and display the shortest path.
+- Click "Calculate Route" to compute and display shortest paths using both algorithms.
+- View route details and comparison in the panel on the map.
 
-### Requirements
+## Requirements
+
 - Node.js, npm
-- GeoServer with proper layers
-- PostgreSQL/PostGIS for network data
+- GeoServer with published WMS layers
+- PostgreSQL/PostGIS/pgRouting
 - React and Leaflet for frontend mapping
 - Express for backend API
 
-### Database & Routing Pipeline
+## Advanced Routing Pipeline
 
-For details on how the shortest path calculation is performed using PostgreSQL, PostGIS, and pgRouting, see the documentation in [`postgresql_postgis_pgrouting_shortest_path_pipeline.md`](./postgresql_postgis_pgrouting_shortest_path_pipeline.md).
+For details on shortest path calculation using PostgreSQL, PostGIS, and pgRouting, see [`postgresql_postgis_pgrouting_shortest_path_pipeline.md`](./postgresql_postgis_pgrouting_shortest_path_pipeline.md).
 
-This document explains:
-- How the road network is stored in the database
-- How shortest path queries are executed
-- Example SQL queries and pipeline steps
+## Notes
 
-Refer to it for backend setup, database schema, and advanced routing logic.
-
-### Notes
 - Ensure CORS is handled properly between frontend and backend.
 - Adjust GeoServer WMS URLs as needed for your setup.
-- This is a basic MVP; further enhancements can include error handling, UI improvements, and additional features.
+- This MVP can be extended with more algorithms, advanced UI, and error handling.
