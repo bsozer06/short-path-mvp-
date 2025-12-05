@@ -4,9 +4,13 @@ import 'leaflet/dist/leaflet.css';
 
 const GEOSERVER_URL = "http://localhost:8080/geoserver/network/wms?";
 const GRID_LAYER = "network:grid_lines";
-const PATH_LAYER = "network:mv_short_path";
+const PATH_LAYERS = {
+  dijkstra: "network:mv_short_path",
+  astar: "network:mv_astar_path"
+};
 
 function FrontendMap() {
+  const [routeInfo, setRouteInfo] = useState({ dijkstra: null, astar: null });
   const mapRef = useRef(null);
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
@@ -20,6 +24,9 @@ function FrontendMap() {
 
   const startMarkerRef = useRef(null);
   const endMarkerRef = useRef(null);
+
+  // Keep references to WMS layers for switching
+  const wmsLayersRef = useRef({});
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -38,11 +45,18 @@ function FrontendMap() {
         format: 'image/png',
         transparent: true,
       });
-      const shortestPath = L.tileLayer.wms(GEOSERVER_URL, {
-        layers: PATH_LAYER,
+      // Both path layers
+      const dijkstraPath = L.tileLayer.wms(GEOSERVER_URL, {
+        layers: PATH_LAYERS.dijkstra,
         format: 'image/png',
         transparent: true,
       });
+      const astarPath = L.tileLayer.wms(GEOSERVER_URL, {
+        layers: PATH_LAYERS.astar,
+        format: 'image/png',
+        transparent: true,
+      });
+      wmsLayersRef.current = { dijkstra: dijkstraPath, astar: astarPath };
 
       // Layer control
       const baseLayers = {
@@ -50,27 +64,34 @@ function FrontendMap() {
       };
       const overlays = {
         'Road Network': roadNetwork,
-        'Shortest Path': shortestPath,
+        'Dijkstra Path': dijkstraPath,
+        'A* Path': astarPath,
       };
       L.control.layers(baseLayers, overlays).addTo(map);
 
       osm.addTo(map);
       roadNetwork.addTo(map);
+      // Add both path layers as visible by default
+      dijkstraPath.addTo(map);
+      astarPath.addTo(map);
 
       map.on('click', function (e) {
         const currentSelecting = selectingRef.current;
 
         if (currentSelecting === 'start') {
-          clearShortestPath();
           setStart(e.latlng);
           setSelecting(null);
         } else if (currentSelecting === 'end') {
-          clearShortestPath();
           setEnd(e.latlng);
           setSelecting(null);
         }
       });
     }
+  }, []);
+
+  // On first mount, reset backend (clear points and refresh views)
+  useEffect(() => {
+    fetch('http://localhost:3001/reset-all', { method: 'POST' });
   }, []);
 
   // Show start/end markers as colored circles with labels
@@ -111,30 +132,40 @@ function FrontendMap() {
   const sendRouteRequest = async () => {
     if (start && end) {
       try {
-        const res = await fetch('http://localhost:3001/update-route', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ start, end }),
-        });
+        // Run both algorithms in parallel
+        const endpoints = {
+          dijkstra: 'http://localhost:3001/update-route',
+          astar: 'http://localhost:3001/astar-route',
+        };
+        const body = JSON.stringify({ start, end });
+        const [dijkstraRes, astarRes] = await Promise.all([
+          fetch(endpoints.dijkstra, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }),
+          fetch(endpoints.astar, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }),
+        ]);
+        const dijkstraData = await dijkstraRes.json();
+        const astarData = await astarRes.json();
+        const info = {
+          dijkstra: (dijkstraData && typeof dijkstraData.edgeCount !== 'undefined' && typeof dijkstraData.totalDistance !== 'undefined') ? {
+            distance: dijkstraData.totalDistance,
+            edgeCount: dijkstraData.edgeCount,
+          } : null,
+          astar: (astarData && typeof astarData.edgeCount !== 'undefined' && typeof astarData.totalDistance !== 'undefined') ? {
+            distance: astarData.totalDistance,
+            edgeCount: astarData.edgeCount,
+          } : null,
+        };
+        setRouteInfo(info);
 
-        const data = await res.json();
-        // alert(data.message);
-
+        // Reload both WMS layers
         const map = mapRef.current;
         if (map) {
-          // Find the shortestPath layer among WMS layers on the map
           map.eachLayer(layer => {
-            console.log('layer:', layer.options.layers);
-            if (layer instanceof L.TileLayer.WMS && layer.options.layers === PATH_LAYER) {
-              // Add a parameter to force reload of the WMS layer
+            if (layer instanceof L.TileLayer.WMS && (layer.options.layers === PATH_LAYERS.dijkstra || layer.options.layers === PATH_LAYERS.astar)) {
               layer.setParams({ _: Date.now() });
             }
           });
         }
-        if (!res.ok) throw new Error('Network response was not ok');
-
-        // alert('Route sent! WMS layer should refresh on map move/zoom.');
-
+        if (!dijkstraRes.ok || !astarRes.ok) throw new Error('Network response was not ok');
       } catch (err) {
         alert('Error sending route: ' + err.message);
       }
@@ -143,18 +174,18 @@ function FrontendMap() {
 
   // Function to clear shortest path data
   const clearShortestPath = async () => {
+    setRouteInfo({ dijkstra: null, astar: null });
     try {
-      const res = await fetch('http://localhost:3001/clear-shortest-path', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await res.json();
-      // alert(data.message || 'Shortest path cleared');
+      // Clear both algorithms' data
+      await Promise.all([
+        fetch('http://localhost:3001/clear-shortest-path', { method: 'POST', headers: { 'Content-Type': 'application/json' } }),
+        fetch('http://localhost:3001/clear-astar-path', { method: 'POST', headers: { 'Content-Type': 'application/json' } }),
+      ]);
       // Optionally force WMS layer reload
       const map = mapRef.current;
       if (map) {
         map.eachLayer(layer => {
-          if (layer instanceof L.TileLayer.WMS && layer.options.layers === PATH_LAYER) {
+          if (layer instanceof L.TileLayer.WMS && (layer.options.layers === PATH_LAYERS.dijkstra || layer.options.layers === PATH_LAYERS.astar)) {
             layer.setParams({ _: Date.now() });
           }
         });
@@ -185,6 +216,32 @@ function FrontendMap() {
         </span>
       </div>
       <div id="map" style={{ height: '500px', width: '100%' }}></div>
+      {(routeInfo.dijkstra || routeInfo.astar) && (
+        <div style={{ marginTop: '10px', background: '#f8f9fa', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}>
+          <b>Route Comparison:</b><br />
+          <table style={{ width: '100%', marginTop: '8px', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#e9ecef' }}>
+                <th style={{ padding: '4px', border: '1px solid #ccc' }}></th>
+                <th style={{ padding: '4px', border: '1px solid #ccc' }}>Dijkstra</th>
+                <th style={{ padding: '4px', border: '1px solid #ccc' }}>A*</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>Total Distance (km)</td>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>{routeInfo.dijkstra ? routeInfo.dijkstra.distance.toFixed(2) : '-'}</td>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>{routeInfo.astar ? routeInfo.astar.distance.toFixed(2) : '-'}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>Edge Count</td>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>{routeInfo.dijkstra ? routeInfo.dijkstra.edgeCount : '-'}</td>
+                <td style={{ padding: '4px', border: '1px solid #ccc' }}>{routeInfo.astar ? routeInfo.astar.edgeCount : '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
       <div>
         <p>
           Click the relevant button to select start and end points from the map. Selected points are shown on the map with different colored markers and labels. You can send them to the server with the "Send" button. <b>To exit selection mode, click anywhere on the map.</b>
